@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy - Deadline</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <h1>Privacy Policy</h1>
+      <p class="subtitle">Deadline</p>
+    </header>
+
+    <section class="prose">
+      <h2>What we process</h2>
+      <ul>
+        <li><strong>Uploaded PDFs</strong> are processed in memory to extract their
+          text and are never written to disk or stored.</li>
+        <li><strong>Extracted syllabus text</strong> is sent to Google's Gemini API
+          to identify deadlines, subject to
+          <a href="https://ai.google.dev/gemini-api/terms">Google's API terms</a>.
+          We do not store it.</li>
+        <li><strong>Deadline items you review</strong> exist only in your browser
+          until you export them; we do not store them server-side.</li>
+      </ul>
+
+      <h2>Google Calendar access</h2>
+      <ul>
+        <li>If you connect Google Calendar, we request the
+          <code>calendar.events</code> scope, which is permission to create events only.
+          We use it for one thing: creating the events you explicitly ask us to add.</li>
+        <li>We never read, list, or delete your existing events.</li>
+        <li>OAuth tokens are stored server-side, keyed to your browser session,
+          and are deleted when you click <em>disconnect</em> (which also revokes
+          our access at Google) or automatically after 90 days of inactivity.</li>
+      </ul>
+
+      <h2>What we don't do</h2>
+      <ul>
+        <li>No accounts, no tracking, no analytics, no ads, no selling of data.</li>
+      </ul>
+
+      <h2>Contact</h2>
+      <p>Questions: <a href="mailto:geldrez.nicholas@gmail.com">geldrez.nicholas@gmail.com</a></p>
+    </section>
+
+    <p><a href="/">&larr; Back to the app</a></p>
+  </main>
+
+  <footer class="footer">
+    <a href="/privacy">Privacy policy</a>
+  </footer>
+</body>
+</html>

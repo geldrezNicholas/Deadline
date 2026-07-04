@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deadline</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body>
+  <!-- the whole app is one Alpine component, defined in static/js/app.js -->
+  <main x-data="syllabusApp()" class="container">
+    <header class="hero">
+      <h1>Deadline<span class="hero-dot">.</span></h1>
+      <p class="subtitle">Upload your syllabus, get every due date on your calendar.</p>
+    </header>
+
+    <!-- @submit.prevent stops the native form post, JS handles the upload -->
+    <form class="upload-card" @submit.prevent="submit()" x-show="!loading">
+      <label class="file-drop">
+        <input
+          type="file"
+          accept="application/pdf"
+          @change="onFileChange($event)"
+        />
+        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+        </svg>
+        <span x-text="fileName || 'Choose a PDF syllabus'"></span>
+      </label>
+
+      <button type="submit" :disabled="!file">
+        Extract deadlines
+      </button>
+    </form>
+
+    <!-- scanning animation shown while parsing, state comes from app.js -->
+    <div class="scanner" x-show="loading" x-cloak>
+      <div class="scan-stage" aria-hidden="true">
+        <div class="scan-doc">
+          <i class="doc-line w-90"></i>
+          <i class="doc-line w-65"></i>
+          <i class="doc-line w-80"></i>
+          <i class="doc-line w-50"></i>
+          <i class="doc-line w-85"></i>
+          <i class="doc-line w-70"></i>
+          <i class="doc-line w-40"></i>
+          <span class="scan-beam"></span>
+        </div>
+        <div class="scan-flow">
+          <i></i><i></i><i></i>
+        </div>
+        <div class="scan-cal">
+          <div class="cal-head"></div>
+          <div class="cal-grid">
+            <i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </div>
+      <p class="scan-status" x-text="stepLabel"></p>
+      <ol class="scan-steps">
+        <template x-for="s in steps" :key="s.key">
+          <li :class="'is-' + stepState(s.key)" x-text="s.label"></li>
+        </template>
+      </ol>
+    </div>
+
+    <div class="error" x-show="error" x-text="error" x-cloak></div>
+
+    <!-- review screen. AI items and manually added items are the same row
+         markup, low-confidence ones get an amber border -->
+    <section class="review" x-show="hasRows" x-cloak>
+      <div class="review-head">
+        <h2>Review deadlines</h2>
+        <p class="hint">
+          Edit anything that looks off. Rows with an
+          <span class="amber-dot"></span> amber border are ones the AI was unsure
+          about, give them a second look.
+        </p>
+      </div>
+
+      <template x-for="row in rows" :key="row.id">
+        <div class="row" :class="{ 'row--unsure': !row.confident }">
+          <input
+            type="text"
+            class="row-title"
+            placeholder="Assignment name"
+            x-model="row.title"
+          />
+
+          <!-- disabled when the user says they don't know the date -->
+          <input
+            type="date"
+            class="row-date"
+            x-model="row.date"
+            :disabled="row.unknownDate"
+          />
+
+          <label class="row-unknown">
+            <input
+              type="checkbox"
+              x-model="row.unknownDate"
+              @change="onUnknownToggle(row)"
+            />
+            <span>No date</span>
+          </label>
+
+          <button
+            type="button"
+            class="row-delete"
+            title="Remove this item"
+            @click="deleteRow(row.id)"
+          >&times;</button>
+        </div>
+      </template>
+
+      <div class="review-actions">
+        <button type="button" class="ghost" @click="addRow()">
+          + Add item manually
+        </button>
+
+        <!-- disabled while any row is invalid -->
+        <button
+          type="button"
+          class="export"
+          :disabled="exporting || exportProblems.length > 0"
+          @click="exportIcs()"
+        >
+          <span x-show="!exporting">Download .ics calendar</span>
+          <span x-show="exporting">Generating…</span>
+        </button>
+
+        <!-- hidden when OAuth isn't configured on the server -->
+        <button
+          type="button"
+          class="export"
+          x-show="google.configured && !google.connected"
+          :disabled="exportProblems.length > 0"
+          @click="connectGoogle()"
+        >Connect Google Calendar</button>
+
+        <button
+          type="button"
+          class="export"
+          x-show="google.connected"
+          :disabled="pushing || exportProblems.length > 0"
+          @click="pushToGoogle()"
+        >
+          <span x-show="!pushing">Add to Google Calendar</span>
+          <span x-show="pushing">Adding…</span>
+        </button>
+      </div>
+
+      <p class="push-note" x-show="pushResult" x-text="pushResult" x-cloak></p>
+      <p class="google-line" x-show="google.connected" x-cloak>
+        Google Calendar connected ·
+        <a href="#" @click.prevent="disconnectGoogle()">disconnect</a>
+      </p>
+
+      <ul class="export-problems" x-show="exportProblems.length" x-cloak>
+        <template x-for="problem in exportProblems" :key="problem">
+          <li x-text="problem"></li>
+        </template>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="/privacy">Privacy policy</a>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# secrets, never commit these
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# local db (holds OAuth tokens)
+*.sqlite
+*.db
+
+# OS noise
+Thumbs.db
+.DS_Store
